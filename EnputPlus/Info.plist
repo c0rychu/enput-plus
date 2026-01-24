@@ -15,7 +15,7 @@
     <key>CFBundleName</key>
     <string>$(PRODUCT_NAME)</string>
     <key>CFBundlePackageType</key>
-    <string>APPL</string>
+    <string>IMMD</string>
     <key>CFBundleShortVersionString</key>
     <string>1.0</string>
     <key>CFBundleVersion</key>
@@ -27,9 +27,9 @@
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
     <key>InputMethodConnectionName</key>
-    <string>EnputPlus_Connection</string>
-    <key>InputMethodServerControllerClass</key>
-    <string>$(PRODUCT_MODULE_NAME).EnputPlusInputController</string>
+    <string>EnputPlus_1_Connection</string>
+	<key>InputMethodServerControllerClass</key>
+	<string>EnputPlusInputController</string>
     <key>tsInputMethodCharacterRepertoireKey</key>
     <array>
         <string>Latn</string>

@@ -1,86 +1,72 @@
 import Cocoa
 import InputMethodKit
 import Carbon
-import os.log
 
 @objc(EnputPlusInputController)
 class EnputPlusInputController: IMKInputController {
 
-    private static let log = OSLog(subsystem: Bundle.main.bundleIdentifier ?? "EnputPlus", category: "InputController")
-
     private var compositionBuffer = ""
     private let spellingEngine = SpellingSuggestionEngine()
     private var currentSuggestions: [String] = []
+    private var selectedCandidateIndex: Int = 0
 
     // MARK: - Lifecycle
 
     override init!(server: IMKServer!, delegate: Any!, client inputClient: Any!) {
         super.init(server: server, delegate: delegate, client: inputClient)
-        os_log("EnputPlusInputController initialized", log: EnputPlusInputController.log, type: .debug)
+        NSLog("EnputPlus: InputController initialized")
     }
 
     // MARK: - IMKInputController Overrides
 
     override func activateServer(_ sender: Any!) {
         super.activateServer(sender)
-        os_log("Input server activated", log: EnputPlusInputController.log, type: .debug)
+        NSLog("EnputPlus: Server activated")
         resetComposition()
     }
 
     override func deactivateServer(_ sender: Any!) {
         commitComposition(sender)
         super.deactivateServer(sender)
-        os_log("Input server deactivated", log: EnputPlusInputController.log, type: .debug)
+        NSLog("EnputPlus: Server deactivated")
     }
 
-    // MARK: - Text Input
+    // MARK: - Event Handling
 
-    override func inputText(_ string: String!, client sender: Any!) -> Bool {
-        os_log("Input text: '%{public}@'", log: EnputPlusInputController.log, type: .debug, string ?? "")
+    override func handle(_ event: NSEvent!, client sender: Any!) -> Bool {
+        guard let event = event else { return false }
+        guard let client = sender as? (any IMKTextInput) else { return false }
 
-        guard let string = string, !string.isEmpty else { return false }
-        guard let client = sender as? IMKTextInput else { return false }
+        NSLog("EnputPlus: handle event - type=\(event.type.rawValue), keyCode=\(event.keyCode), chars='\(event.characters ?? "")'")
 
-        // Handle space - commit current composition and add space
-        if string == " " {
-            if !compositionBuffer.isEmpty {
-                commitComposition(sender)
-            }
-            // Let the system handle the space
+        // Only handle key down events
+        guard event.type == .keyDown else { return false }
+
+        let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        let hasCommandOrControl = modifiers.contains(.command) || modifiers.contains(.control)
+
+        // Don't handle if Command or Control is pressed (allow shortcuts)
+        if hasCommandOrControl {
             return false
         }
 
-        // Handle alphanumeric characters
-        if isAlphanumeric(string) {
-            compositionBuffer += string
-            updateMarkedText(client: client)
-            updateCandidates()
-            return true
-        }
+        let keyCode = event.keyCode
 
-        // For punctuation, commit first then let system handle
-        if !compositionBuffer.isEmpty {
-            commitComposition(sender)
-        }
-        return false
-    }
-
-    override func didCommand(by selector: Selector!, client sender: Any!) -> Bool {
-        os_log("Did command: %{public}@", log: EnputPlusInputController.log, type: .debug, NSStringFromSelector(selector))
-
-        guard let client = sender as? IMKTextInput else { return false }
-
-        switch selector {
-        case #selector(insertNewline(_:)):
-            // Enter/Return - commit composition
+        // Handle special keys
+        switch Int(keyCode) {
+        case kVK_Return, kVK_ANSI_KeypadEnter:
             if !compositionBuffer.isEmpty {
-                commitComposition(sender)
+                // If candidates are showing, select the highlighted one
+                if !currentSuggestions.isEmpty && selectedCandidateIndex < currentSuggestions.count {
+                    selectCandidate(at: selectedCandidateIndex, client: client)
+                } else {
+                    commitCompositionWithClient(client)
+                }
                 return true
             }
             return false
 
-        case #selector(deleteBackward(_:)):
-            // Backspace - delete from composition buffer
+        case kVK_Delete:
             if !compositionBuffer.isEmpty {
                 compositionBuffer.removeLast()
                 if compositionBuffer.isEmpty {
@@ -94,8 +80,7 @@ class EnputPlusInputController: IMKInputController {
             }
             return false
 
-        case #selector(cancelOperation(_:)):
-            // Escape - cancel composition
+        case kVK_Escape:
             if !compositionBuffer.isEmpty {
                 resetComposition()
                 client.setMarkedText("", selectionRange: NSRange(location: 0, length: 0), replacementRange: NSRange(location: NSNotFound, length: 0))
@@ -104,67 +89,112 @@ class EnputPlusInputController: IMKInputController {
             }
             return false
 
-        case #selector(moveUp(_:)):
-            // Arrow up - navigate candidates
-            if !currentSuggestions.isEmpty {
-                candidatesWindow()?.moveUp(sender)
-                return true
+        case kVK_Space:
+            if !compositionBuffer.isEmpty {
+                commitCompositionWithClient(client)
             }
             return false
 
-        case #selector(moveDown(_:)):
-            // Arrow down - navigate candidates
-            if !currentSuggestions.isEmpty {
-                candidatesWindow()?.moveDown(sender)
-                return true
-            }
-            return false
-
-        case #selector(insertTab(_:)):
-            // Tab - select first candidate
+        case kVK_Tab:
             if !currentSuggestions.isEmpty {
                 selectCandidate(at: 0, client: client)
                 return true
             }
             return false
 
+        case kVK_UpArrow:
+            if !currentSuggestions.isEmpty {
+                selectedCandidateIndex = max(0, selectedCandidateIndex - 1)
+                candidatesWindow()?.moveUp(sender)
+                NSLog("EnputPlus: Arrow up, selected index = \(selectedCandidateIndex)")
+                return true
+            }
+            return false
+
+        case kVK_DownArrow:
+            if !currentSuggestions.isEmpty {
+                selectedCandidateIndex = min(currentSuggestions.count - 1, selectedCandidateIndex + 1)
+                candidatesWindow()?.moveDown(sender)
+                NSLog("EnputPlus: Arrow down, selected index = \(selectedCandidateIndex)")
+                return true
+            }
+            return false
+
         default:
+            break
+        }
+
+        // Handle character input
+        guard let characters = event.characters, !characters.isEmpty else {
             return false
         }
+
+        let char = characters.first!
+
+        // Handle number keys 1-9 for candidate selection
+        if !currentSuggestions.isEmpty {
+            if let number = Int(String(char)), number >= 1 && number <= 9 {
+                let index = number - 1
+                if index < currentSuggestions.count {
+                    selectCandidate(at: index, client: client)
+                    return true
+                }
+            }
+        }
+
+        // Handle alphanumeric characters
+        if char.isLetter || char.isNumber {
+            compositionBuffer += String(char)
+            NSLog("EnputPlus: Buffer = '\(compositionBuffer)'")
+            updateMarkedText(client: client)
+            updateCandidates()
+            return true
+        }
+
+        // For punctuation, commit first then let system handle
+        if !compositionBuffer.isEmpty {
+            commitCompositionWithClient(client)
+        }
+        return false
     }
 
     // MARK: - Candidates
 
     override func candidates(_ sender: Any!) -> [Any]! {
-        os_log("Candidates requested, returning %d items", log: EnputPlusInputController.log, type: .debug, currentSuggestions.count)
+        NSLog("EnputPlus: candidates() called, returning \(currentSuggestions.count) items")
         return currentSuggestions
     }
 
     override func candidateSelected(_ candidateString: NSAttributedString!) {
-        os_log("Candidate selected: %{public}@", log: EnputPlusInputController.log, type: .debug, candidateString?.string ?? "")
+        NSLog("EnputPlus: candidateSelected: \(candidateString?.string ?? "nil")")
 
         guard let selectedWord = candidateString?.string else { return }
-        guard let client = self.client() as? IMKTextInput else { return }
+        guard let client = self.client() else { return }
 
-        // Insert the selected word
         client.insertText(selectedWord, replacementRange: NSRange(location: NSNotFound, length: 0))
-
-        // Reset state
         resetComposition()
         hideCandidates()
     }
 
     override func candidateSelectionChanged(_ candidateString: NSAttributedString!) {
-        os_log("Candidate selection changed: %{public}@", log: EnputPlusInputController.log, type: .debug, candidateString?.string ?? "")
+        NSLog("EnputPlus: candidateSelectionChanged: \(candidateString?.string ?? "nil")")
     }
 
     // MARK: - Composition
 
     override func commitComposition(_ sender: Any!) {
-        os_log("Committing composition: '%{public}@'", log: EnputPlusInputController.log, type: .debug, compositionBuffer)
-
+        NSLog("EnputPlus: commitComposition called, buffer='\(compositionBuffer)'")
         guard !compositionBuffer.isEmpty else { return }
-        guard let client = sender as? IMKTextInput ?? self.client() as? IMKTextInput else { return }
+
+        if let client = sender as? (any IMKTextInput) {
+            commitCompositionWithClient(client)
+        } else if let client = self.client() {
+            commitCompositionWithClient(client)
+        }
+    }
+
+    private func commitCompositionWithClient(_ client: any IMKTextInput) {
+        guard !compositionBuffer.isEmpty else { return }
 
         client.insertText(compositionBuffer, replacementRange: NSRange(location: NSNotFound, length: 0))
         resetComposition()
@@ -176,9 +206,10 @@ class EnputPlusInputController: IMKInputController {
     private func resetComposition() {
         compositionBuffer = ""
         currentSuggestions = []
+        selectedCandidateIndex = 0
     }
 
-    private func updateMarkedText(client: IMKTextInput) {
+    private func updateMarkedText(client: any IMKTextInput) {
         let attributes: [NSAttributedString.Key: Any] = [
             .underlineStyle: NSUnderlineStyle.single.rawValue,
             .foregroundColor: NSColor.textColor
@@ -189,6 +220,8 @@ class EnputPlusInputController: IMKInputController {
 
     private func updateCandidates() {
         currentSuggestions = spellingEngine.getSuggestions(for: compositionBuffer)
+        selectedCandidateIndex = 0  // Reset selection when candidates change
+        NSLog("EnputPlus: Got \(currentSuggestions.count) suggestions for '\(compositionBuffer)'")
 
         if currentSuggestions.isEmpty {
             hideCandidates()
@@ -198,7 +231,10 @@ class EnputPlusInputController: IMKInputController {
     }
 
     private func showCandidates() {
-        guard let candidates = candidatesWindow() else { return }
+        guard let candidates = candidatesWindow() else {
+            NSLog("EnputPlus: No candidates window available!")
+            return
+        }
         candidates.update()
         candidates.show()
     }
@@ -212,45 +248,12 @@ class EnputPlusInputController: IMKInputController {
         return appDelegate.candidatesWindow
     }
 
-    private func selectCandidate(at index: Int, client: IMKTextInput) {
+    private func selectCandidate(at index: Int, client: any IMKTextInput) {
         guard index < currentSuggestions.count else { return }
         let selectedWord = currentSuggestions[index]
 
         client.insertText(selectedWord, replacementRange: NSRange(location: NSNotFound, length: 0))
         resetComposition()
         hideCandidates()
-    }
-
-    private func isAlphanumeric(_ string: String) -> Bool {
-        let alphanumericSet = CharacterSet.alphanumerics
-        return string.unicodeScalars.allSatisfy { alphanumericSet.contains($0) }
-    }
-
-    // Handle number key selection (1-9)
-    override func handle(_ event: NSEvent!, client sender: Any!) -> Bool {
-        guard let event = event else { return false }
-
-        // Handle key down events for number selection
-        if event.type == .keyDown {
-            // Check for number keys 1-9 when we have suggestions
-            if !currentSuggestions.isEmpty {
-                let keyCode = event.keyCode
-                // Number keys 1-9 (keyCode 18-26 on US keyboard, but we check characters instead)
-                if let characters = event.characters,
-                   let firstChar = characters.first,
-                   let number = Int(String(firstChar)),
-                   number >= 1 && number <= 9 {
-                    let index = number - 1
-                    if index < currentSuggestions.count {
-                        guard let client = sender as? IMKTextInput else { return false }
-                        selectCandidate(at: index, client: client)
-                        return true
-                    }
-                }
-            }
-        }
-
-        // Call super for default handling
-        return false
     }
 }

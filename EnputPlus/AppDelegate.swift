@@ -2,41 +2,51 @@ import Cocoa
 import InputMethodKit
 import os.log
 
-@main
-class AppDelegate: NSObject, NSApplicationDelegate {
+private let log = OSLog(subsystem: "com.enputplus.inputmethod.EnputPlus", category: "AppDelegate")
 
-    private static let log = OSLog(subsystem: Bundle.main.bundleIdentifier ?? "EnputPlus", category: "AppDelegate")
+class AppDelegate: NSObject, NSApplicationDelegate {
 
     var server: IMKServer!
     var candidatesWindow: IMKCandidates!
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        os_log("EnputPlus launching...", log: AppDelegate.log, type: .info)
+        os_log("EnputPlus: applicationDidFinishLaunching called", log: log, type: .default)
 
         guard let connectionName = Bundle.main.infoDictionary?["InputMethodConnectionName"] as? String else {
-            os_log("Failed to get InputMethodConnectionName from Info.plist", log: AppDelegate.log, type: .error)
+            NSLog("EnputPlus: ERROR - Failed to get InputMethodConnectionName from Info.plist")
             return
         }
 
         guard let bundleIdentifier = Bundle.main.bundleIdentifier else {
-            os_log("Failed to get bundle identifier", log: AppDelegate.log, type: .error)
+            NSLog("EnputPlus: ERROR - Failed to get bundle identifier")
             return
         }
 
-        os_log("Initializing IMKServer with connection: %{public}@, bundle: %{public}@",
-               log: AppDelegate.log, type: .info, connectionName, bundleIdentifier)
+        NSLog("EnputPlus: Initializing IMKServer with connection: \(connectionName), bundle: \(bundleIdentifier)")
 
         server = IMKServer(name: connectionName, bundleIdentifier: bundleIdentifier)
+
+        if server == nil {
+            NSLog("EnputPlus: ERROR - IMKServer initialization failed!")
+        } else {
+            NSLog("EnputPlus: IMKServer initialized successfully")
+        }
 
         candidatesWindow = IMKCandidates(
             server: server,
             panelType: kIMKSingleColumnScrollingCandidatePanel
         )
 
-        os_log("EnputPlus initialized successfully", log: AppDelegate.log, type: .info)
+        if candidatesWindow == nil {
+            NSLog("EnputPlus: ERROR - IMKCandidates initialization failed!")
+        } else {
+            NSLog("EnputPlus: IMKCandidates initialized successfully")
+        }
+
+        NSLog("EnputPlus: Initialization complete")
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        os_log("EnputPlus terminating", log: AppDelegate.log, type: .info)
+        NSLog("EnputPlus: applicationWillTerminate called")
     }
 }

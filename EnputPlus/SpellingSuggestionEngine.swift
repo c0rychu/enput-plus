@@ -1,4 +1,4 @@
-import Foundation
+import Cocoa
 import os.log
 
 class SpellingSuggestionEngine {
@@ -34,7 +34,8 @@ class SpellingSuggestionEngine {
             let guesses = spellChecker.guesses(
                 forWordRange: NSRange(location: 0, length: trimmedWord.count),
                 in: trimmedWord,
-                language: language
+                language: language,
+                inSpellDocumentWithTag: 0
             ) ?? []
 
             return Array(guesses.prefix(maxSuggestions))
@@ -47,7 +48,8 @@ class SpellingSuggestionEngine {
         let completions = spellChecker.completions(
             forPartialWordRange: NSRange(location: 0, length: trimmedWord.count),
             in: trimmedWord,
-            language: language
+            language: language,
+            inSpellDocumentWithTag: 0
         ) ?? []
 
         return Array(completions.prefix(maxSuggestions))
@@ -69,12 +71,5 @@ class SpellingSuggestionEngine {
         guard !word.isEmpty else { return }
         spellChecker.learnWord(word)
         os_log("Learned word: %{public}@", log: SpellingSuggestionEngine.log, type: .info, word)
-    }
-
-    /// Forget a learned word
-    func forgetWord(_ word: String) {
-        guard !word.isEmpty else { return }
-        spellChecker.forgetWord(word)
-        os_log("Forgot word: %{public}@", log: SpellingSuggestionEngine.log, type: .info, word)
     }
 }
