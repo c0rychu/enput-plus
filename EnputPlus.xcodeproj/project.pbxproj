@@ -12,6 +12,8 @@
 		E91000002B0000000000003 /* SpellingSuggestionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = E91000012B0000000000003 /* SpellingSuggestionEngine.swift */; };
 		E91000002B0000000000009 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = E91000012B0000000000009 /* main.swift */; };
 		E91000002B0000000000004 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E91000012B0000000000004 /* Assets.xcassets */; };
+		E91000002B000000000000A /* InputMethodIconTemplate.pdf in Resources */ = {isa = PBXBuildFile; fileRef = E91000012B000000000000A /* InputMethodIconTemplate.pdf */; };
+		E91000002B000000000000B /* InputMethodIcon.pdf in Resources */ = {isa = PBXBuildFile; fileRef = E91000012B000000000000B /* InputMethodIcon.pdf */; };
 		E91000002B0000000000005 /* InputMethodKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E91000012B0000000000005 /* InputMethodKit.framework */; };
 		E91000002B0000000000006 /* Carbon.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E91000012B0000000000006 /* Carbon.framework */; };
 /* End PBXBuildFile section */
@@ -27,6 +29,8 @@
 		E91000012B0000000000007 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		E91000012B0000000000008 /* EnputPlus.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = EnputPlus.entitlements; sourceTree = "<group>"; };
 		E91000012B0000000000009 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		E91000012B000000000000A /* InputMethodIconTemplate.pdf */ = {isa = PBXFileReference; lastKnownFileType = image.pdf; path = InputMethodIconTemplate.pdf; sourceTree = "<group>"; };
+		E91000012B000000000000B /* InputMethodIcon.pdf */ = {isa = PBXFileReference; lastKnownFileType = image.pdf; path = InputMethodIcon.pdf; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -59,6 +63,8 @@
 				E91000012B0000000000002 /* EnputPlusInputController.swift */,
 				E91000012B0000000000003 /* SpellingSuggestionEngine.swift */,
 				E91000012B0000000000004 /* Assets.xcassets */,
+				E91000012B000000000000A /* InputMethodIconTemplate.pdf */,
+				E91000012B000000000000B /* InputMethodIcon.pdf */,
 				E91000012B0000000000007 /* Info.plist */,
 				E91000012B0000000000008 /* EnputPlus.entitlements */,
 			);
@@ -141,6 +147,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				E91000002B0000000000004 /* Assets.xcassets in Resources */,
+				E91000002B000000000000A /* InputMethodIconTemplate.pdf in Resources */,
+				E91000002B000000000000B /* InputMethodIcon.pdf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
