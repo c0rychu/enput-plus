@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		22E3C77F2F26393E006F3809 /* PreferencesWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22E3C77E2F26393E006F3809 /* PreferencesWindow.swift */; };
 		E91000002B0000000000001 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = E91000012B0000000000001 /* AppDelegate.swift */; };
 		E91000002B0000000000002 /* EnputPlusInputController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E91000012B0000000000002 /* EnputPlusInputController.swift */; };
 		E91000002B0000000000003 /* SpellingSuggestionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = E91000012B0000000000003 /* SpellingSuggestionEngine.swift */; };
@@ -21,6 +22,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		22E3C77E2F26393E006F3809 /* PreferencesWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesWindow.swift; sourceTree = "<group>"; };
 		E91000012B0000000000000 /* EnputPlus.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = EnputPlus.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E91000012B0000000000001 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		E91000012B0000000000002 /* EnputPlusInputController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnputPlusInputController.swift; sourceTree = "<group>"; };
@@ -62,6 +64,7 @@
 		E91000042B0000000000002 /* EnputPlus */ = {
 			isa = PBXGroup;
 			children = (
+				22E3C77E2F26393E006F3809 /* PreferencesWindow.swift */,
 				E91000012B0000000000009 /* main.swift */,
 				E91000012B000000000000D /* Constants.swift */,
 				E91000012B000000000000C /* Logger.swift */,
@@ -170,6 +173,7 @@
 				E91000002B0000000000009 /* main.swift in Sources */,
 				E91000002B0000000000001 /* AppDelegate.swift in Sources */,
 				E91000002B0000000000002 /* EnputPlusInputController.swift in Sources */,
+				22E3C77F2F26393E006F3809 /* PreferencesWindow.swift in Sources */,
 				E91000002B0000000000003 /* SpellingSuggestionEngine.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -313,7 +317,7 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = EnputPlus/Info.plist;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright 2024 EnputPlus. All rights reserved.";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright 2026 Cory Chu. MIT License.";
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -340,7 +344,7 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = EnputPlus/Info.plist;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright 2024 EnputPlus. All rights reserved.";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright 2026 Cory Chu. MIT License.";
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

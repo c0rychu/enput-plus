@@ -139,6 +139,26 @@ final class EnputPlusInputController: IMKInputController {
         os_log("InputController initialized", log: Log.inputController, type: .info)
     }
 
+    // MARK: - Menu
+
+    override func menu() -> NSMenu! {
+        let menu = NSMenu()
+
+        let aboutItem = NSMenuItem(
+            title: "About EnputPlus",
+            action: #selector(showAbout(_:)),
+            keyEquivalent: ""
+        )
+        aboutItem.target = self
+        menu.addItem(aboutItem)
+
+        return menu
+    }
+
+    @objc private func showAbout(_ sender: Any?) {
+        PreferencesWindow.shared.showWindow()
+    }
+
     // MARK: - IMKInputController Overrides
 
     override func activateServer(_ sender: Any!) {
