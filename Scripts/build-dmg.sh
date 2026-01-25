@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # EnputPlus DMG Builder Script
-# Creates a distributable DMG for EnputPlus
+# Creates a production-ready DMG with drag-and-drop installation
 
 set -e
 
@@ -12,6 +12,9 @@ DIST_DIR="$PROJECT_DIR/dist"
 APP_NAME="EnputPlus.app"
 DMG_NAME="EnputPlus"
 VERSION="1.0"
+VOLUME_NAME="EnputPlus"
+DMG_TEMP="$PROJECT_DIR/${DMG_NAME}-temp.dmg"
+DMG_PATH="$PROJECT_DIR/${DMG_NAME}-${VERSION}.dmg"
 
 echo "=== EnputPlus DMG Builder ==="
 echo ""
@@ -26,6 +29,8 @@ fi
 echo "Cleaning previous build..."
 rm -rf "$BUILD_DIR"
 rm -rf "$DIST_DIR"
+rm -f "$DMG_TEMP"
+rm -f "$DMG_PATH"
 mkdir -p "$DIST_DIR"
 
 # Build for Release
@@ -48,34 +53,24 @@ fi
 # Copy app to dist
 cp -R "$BUILT_APP" "$DIST_DIR/"
 
-# Create README for DMG
-cat > "$DIST_DIR/README.txt" << 'EOF'
-EnputPlus - English Input Method for macOS
+# Copy Quit script (for updating)
+cp "$SCRIPT_DIR/QuitBeforeUpdate.command" "$DIST_DIR/"
+chmod +x "$DIST_DIR/QuitBeforeUpdate.command"
 
-INSTALLATION:
-1. Drag EnputPlus.app to ~/Library/Input Methods/
-   (or copy it manually to /Users/[YourUsername]/Library/Input Methods/)
+# Ensure Input Methods folder exists for the user
+mkdir -p "$HOME/Library/Input Methods"
 
-2. Log out and log back in
+# Create symbolic link to Input Methods folder
+ln -s "$HOME/Library/Input Methods" "$DIST_DIR/Input Methods"
 
-3. Open System Settings → Keyboard → Input Sources
-
-4. Click the + button and find "EnputPlus" under English
-
-5. Add it and switch to EnputPlus to start using it
-
-USAGE:
-- Type normally - suggestions will appear for partial words
-- Use arrow keys or number keys (1-9) to select suggestions
-- Press Tab to select the first suggestion
-- Press Space or Return to commit your typed text
-- Press Escape to cancel
-
-UNINSTALLATION:
-1. Remove EnputPlus from Input Sources in System Settings
-2. Delete EnputPlus.app from ~/Library/Input Methods/
-3. Log out and log back in
-EOF
+# Copy background image if it exists
+if [ -f "$SCRIPT_DIR/dmg-background.png" ]; then
+    echo "Using custom background image..."
+    mkdir -p "$DIST_DIR/.background"
+    cp "$SCRIPT_DIR/dmg-background.png" "$DIST_DIR/.background/background.png"
+else
+    echo "Note: No background image found. Create Scripts/dmg-background.png (540x370) to add one."
+fi
 
 # Check if we should sign (optional)
 if [ -n "$DEVELOPER_ID" ]; then
@@ -88,32 +83,84 @@ else
     echo "Note: Skipping code signing. Set DEVELOPER_ID environment variable to sign."
 fi
 
-# Create DMG
+# Create temporary read-write DMG
 echo "Creating DMG..."
-DMG_PATH="$PROJECT_DIR/${DMG_NAME}-${VERSION}.dmg"
-
-# Remove old DMG if exists
-rm -f "$DMG_PATH"
-
 hdiutil create \
-    -volname "$DMG_NAME" \
+    -volname "$VOLUME_NAME" \
     -srcfolder "$DIST_DIR" \
     -ov \
-    -format UDZO \
-    "$DMG_PATH"
+    -format UDRW \
+    "$DMG_TEMP"
+
+# Mount the DMG
+echo "Configuring DMG appearance..."
+MOUNT_DIR=$(hdiutil attach -readwrite -noverify "$DMG_TEMP" | grep "/Volumes/$VOLUME_NAME" | awk '{print $3}')
+
+if [ -z "$MOUNT_DIR" ]; then
+    echo "Error: Failed to mount DMG"
+    exit 1
+fi
+
+# Configure DMG window appearance using AppleScript
+osascript << EOF
+tell application "Finder"
+    tell disk "$VOLUME_NAME"
+        open
+        set current view of container window to icon view
+        set toolbar visible of container window to false
+        set statusbar visible of container window to false
+        set bounds of container window to {400, 150, 940, 580}
+        set theViewOptions to icon view options of container window
+        set arrangement of theViewOptions to not arranged
+        set icon size of theViewOptions to 72
+
+        -- Set background image if it exists
+        try
+            set background picture of theViewOptions to file ".background:background.png"
+        end try
+
+        -- Position items: App on left, destination on right, quit script bottom-left
+        set position of item "$APP_NAME" of container window to {130, 110}
+        set position of item "Input Methods" of container window to {410, 110}
+        set position of item "QuitBeforeUpdate.command" of container window to {80, 290}
+
+        close
+        open
+        update without registering applications
+        delay 1
+    end tell
+end tell
+EOF
+
+# Ensure changes are written
+sync
+
+# Unmount
+hdiutil detach "$MOUNT_DIR" -quiet
+
+# Convert to compressed read-only DMG
+echo "Compressing DMG..."
+hdiutil convert "$DMG_TEMP" -format UDZO -o "$DMG_PATH"
+
+# Clean up temp DMG
+rm -f "$DMG_TEMP"
 
 echo ""
 echo "=== DMG Created ==="
 echo "Location: $DMG_PATH"
 echo ""
+echo "Installation: Drag EnputPlus.app to 'Input Methods' folder, then log out/in."
+echo ""
 
 # Notarization instructions
-echo "To notarize (requires Apple Developer account):"
-echo ""
-echo "  xcrun notarytool submit \"$DMG_PATH\" \\"
-echo "    --apple-id \"your@email.com\" \\"
-echo "    --team-id \"TEAMID\" \\"
-echo "    --password \"app-specific-password\" \\"
-echo "    --wait"
-echo ""
-echo "  xcrun stapler staple \"$DMG_PATH\""
+if [ -z "$DEVELOPER_ID" ]; then
+    echo "To notarize (requires Apple Developer account):"
+    echo ""
+    echo "  xcrun notarytool submit \"$DMG_PATH\" \\"
+    echo "    --apple-id \"your@email.com\" \\"
+    echo "    --team-id \"TEAMID\" \\"
+    echo "    --password \"app-specific-password\" \\"
+    echo "    --wait"
+    echo ""
+    echo "  xcrun stapler staple \"$DMG_PATH\""
+fi
