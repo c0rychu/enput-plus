@@ -24,7 +24,9 @@ final class SpellingSuggestionEngine {
         self.documentTag = NSSpellChecker.uniqueSpellDocumentTag()
 
         configureLanguage()
+        #if DEBUG
         os_log("SpellingSuggestionEngine ready", log: Log.spelling, type: .info)
+        #endif
     }
 
     // MARK: - Public API
@@ -58,7 +60,6 @@ final class SpellingSuggestionEngine {
         guard !trimmed.isEmpty else { return }
 
         spellChecker.learnWord(trimmed)
-        os_log("Word learned", log: Log.spelling, type: .info)
     }
 
     // MARK: - Private
@@ -66,18 +67,24 @@ final class SpellingSuggestionEngine {
     private func configureLanguage() {
         guard !spellChecker.setLanguage(language) else { return }
 
+        #if DEBUG
         os_log("Language %{public}@ unavailable, trying fallback",
                log: Log.spelling, type: .info, language)
+        #endif
 
         for fallback in spellChecker.availableLanguages {
             if spellChecker.setLanguage(fallback) {
+                #if DEBUG
                 os_log("Using fallback language: %{public}@",
                        log: Log.spelling, type: .info, fallback)
+                #endif
                 return
             }
         }
 
+        #if DEBUG
         os_log("No spell check language available", log: Log.spelling, type: .error)
+        #endif
     }
 
     private func isMisspelled(_ word: String) -> Bool {
@@ -86,8 +93,6 @@ final class SpellingSuggestionEngine {
     }
 
     private func corrections(for word: String, range: NSRange) -> [String] {
-        os_log("Fetching corrections", log: Log.spelling, type: .debug)
-
         let guesses = spellChecker.guesses(
             forWordRange: range,
             in: word,
@@ -99,8 +104,6 @@ final class SpellingSuggestionEngine {
     }
 
     private func completions(for word: String, range: NSRange) -> [String] {
-        os_log("Fetching completions", log: Log.spelling, type: .debug)
-
         let results = spellChecker.completions(
             forPartialWordRange: range,
             in: word,
@@ -110,4 +113,12 @@ final class SpellingSuggestionEngine {
 
         return Array(results.prefix(maxSuggestions))
     }
+
+    deinit {
+        NSSpellChecker.shared.closeSpellDocument(withTag: documentTag)
+        #if DEBUG
+        os_log("Closed spell document tag", log: Log.spelling, type: .info)
+        #endif
+    }
 }
+
