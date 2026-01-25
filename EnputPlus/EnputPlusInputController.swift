@@ -13,27 +13,50 @@ final class EnputPlusInputController: IMKInputController {
 
     private struct CompositionState {
         var buffer = ""
+        var cursorPosition = 0  // UTF-16 offset for compatibility with NSRange
         var suggestions: [String] = []
         var selectedIndex = 0
         var isNavigatingSuggestions = false  // True when user used arrow keys to select
 
         var isEmpty: Bool { buffer.isEmpty }
         var hasSuggestions: Bool { !suggestions.isEmpty }
+        var cursorAtEnd: Bool { cursorPosition >= buffer.utf16.count }
 
-        /// The current word being typed (text after the last space).
-        var currentWord: String {
-            if let lastSpaceIndex = buffer.lastIndex(of: " ") {
-                return String(buffer[buffer.index(after: lastSpaceIndex)...])
+        /// Range of the word at cursor position (start index, end index in buffer).
+        var wordRangeAtCursor: Range<String.Index> {
+            guard !buffer.isEmpty else { return buffer.startIndex..<buffer.startIndex }
+
+            // Convert UTF-16 cursor position to String.Index
+            let cursorIndex = buffer.utf16.index(buffer.utf16.startIndex, offsetBy: min(cursorPosition, buffer.utf16.count))
+            let cursorStringIndex = String.Index(cursorIndex, within: buffer) ?? buffer.endIndex
+
+            // Find word boundaries
+            var wordStart = cursorStringIndex
+            var wordEnd = cursorStringIndex
+
+            // Search backward for word start
+            while wordStart > buffer.startIndex {
+                let prevIndex = buffer.index(before: wordStart)
+                if buffer[prevIndex] == " " {
+                    break
+                }
+                wordStart = prevIndex
             }
-            return buffer
+
+            // Search forward for word end
+            while wordEnd < buffer.endIndex {
+                if buffer[wordEnd] == " " {
+                    break
+                }
+                wordEnd = buffer.index(after: wordEnd)
+            }
+
+            return wordStart..<wordEnd
         }
 
-        /// The prefix before the current word (including trailing space).
-        var prefixBeforeCurrentWord: String {
-            if let lastSpaceIndex = buffer.lastIndex(of: " ") {
-                return String(buffer[...lastSpaceIndex])
-            }
-            return ""
+        /// The word at cursor position.
+        var currentWord: String {
+            String(buffer[wordRangeAtCursor])
         }
 
         /// Whether we have a word to get suggestions for.
@@ -41,14 +64,65 @@ final class EnputPlusInputController: IMKInputController {
 
         mutating func reset() {
             buffer = ""
+            cursorPosition = 0
             suggestions = []
             selectedIndex = 0
             isNavigatingSuggestions = false
         }
 
-        /// Replaces the current word with the given text.
+        /// Replaces the word at cursor with the given text.
         mutating func replaceCurrentWord(with text: String) {
-            buffer = prefixBeforeCurrentWord + text
+            let range = wordRangeAtCursor
+            let beforeWord = String(buffer[..<range.lowerBound])
+            let afterWord = String(buffer[range.upperBound...])
+            buffer = beforeWord + text + afterWord
+            // Move cursor to end of inserted word
+            cursorPosition = (beforeWord + text).utf16.count
+        }
+
+        /// Inserts text at cursor position.
+        mutating func insertAtCursor(_ text: String) {
+            let cursorIndex = buffer.utf16.index(buffer.utf16.startIndex, offsetBy: min(cursorPosition, buffer.utf16.count))
+            let stringIndex = String.Index(cursorIndex, within: buffer) ?? buffer.endIndex
+            buffer.insert(contentsOf: text, at: stringIndex)
+            cursorPosition += text.utf16.count
+        }
+
+        /// Deletes character before cursor (backspace).
+        mutating func deleteBeforeCursor() -> Bool {
+            guard cursorPosition > 0 else { return false }
+            let cursorIndex = buffer.utf16.index(buffer.utf16.startIndex, offsetBy: cursorPosition)
+            guard let stringIndex = String.Index(cursorIndex, within: buffer),
+                  stringIndex > buffer.startIndex else { return false }
+            let deleteIndex = buffer.index(before: stringIndex)
+            let charToDelete = buffer[deleteIndex]
+            buffer.remove(at: deleteIndex)
+            cursorPosition -= String(charToDelete).utf16.count
+            return true
+        }
+
+        /// Moves cursor left by one character.
+        mutating func moveCursorLeft() -> Bool {
+            guard cursorPosition > 0 else { return false }
+            let cursorIndex = buffer.utf16.index(buffer.utf16.startIndex, offsetBy: cursorPosition)
+            guard let stringIndex = String.Index(cursorIndex, within: buffer),
+                  stringIndex > buffer.startIndex else { return false }
+            let prevIndex = buffer.index(before: stringIndex)
+            let char = buffer[prevIndex]
+            cursorPosition -= String(char).utf16.count
+            return true
+        }
+
+        /// Moves cursor right by one character.
+        mutating func moveCursorRight() -> Bool {
+            let bufferLength = buffer.utf16.count
+            guard cursorPosition < bufferLength else { return false }
+            let cursorIndex = buffer.utf16.index(buffer.utf16.startIndex, offsetBy: cursorPosition)
+            guard let stringIndex = String.Index(cursorIndex, within: buffer),
+                  stringIndex < buffer.endIndex else { return false }
+            let char = buffer[stringIndex]
+            cursorPosition += String(char).utf16.count
+            return true
         }
     }
 
@@ -168,6 +242,12 @@ final class EnputPlusInputController: IMKInputController {
         case kVK_DownArrow:
             return handleArrowDown(sender: sender)
 
+        case kVK_LeftArrow:
+            return handleArrowLeft(client: client)
+
+        case kVK_RightArrow:
+            return handleArrowRight(client: client)
+
         default:
             return nil
         }
@@ -197,10 +277,9 @@ final class EnputPlusInputController: IMKInputController {
         return true
     }
 
-    /// Space: Add literal space to buffer, continue composition
+    /// Space: Add literal space at cursor, continue composition
     private func handleSpace(client: any IMKTextInput) -> Bool {
-        // Add space to buffer
-        state.buffer += " "
+        state.insertAtCursor(" ")
         state.suggestions = []
         state.selectedIndex = 0
         state.isNavigatingSuggestions = false
@@ -220,11 +299,9 @@ final class EnputPlusInputController: IMKInputController {
         return true
     }
 
-    /// Backspace: Remove last character
+    /// Backspace: Remove character before cursor
     private func handleBackspace(client: any IMKTextInput) -> Bool {
-        guard !state.isEmpty else { return false }
-
-        state.buffer.removeLast()
+        guard state.deleteBeforeCursor() else { return false }
 
         if state.isEmpty {
             hideCandidates()
@@ -237,13 +314,21 @@ final class EnputPlusInputController: IMKInputController {
         return true
     }
 
-    /// Forward Delete: Same as backspace for composition
+    /// Forward Delete: Delete character after cursor
     private func handleForwardDelete(client: any IMKTextInput) -> Bool {
-        return handleBackspace(client: client)
+        guard !state.isEmpty, !state.cursorAtEnd else { return false }
+
+        // Move cursor right then delete before cursor
+        if state.moveCursorRight() {
+            return handleBackspace(client: client)
+        }
+        return false
     }
 
     private func handleArrowUp(sender: Any!) -> Bool {
-        guard state.hasSuggestions else { return false }
+        // Always consume up/down when we have a buffer to prevent system from interfering
+        guard !state.isEmpty else { return false }
+        guard state.hasSuggestions else { return true }  // Consume but do nothing
 
         state.selectedIndex = max(0, state.selectedIndex - 1)
         state.isNavigatingSuggestions = true
@@ -253,12 +338,54 @@ final class EnputPlusInputController: IMKInputController {
     }
 
     private func handleArrowDown(sender: Any!) -> Bool {
-        guard state.hasSuggestions else { return false }
+        // Always consume up/down when we have a buffer to prevent system from interfering
+        guard !state.isEmpty else { return false }
+        guard state.hasSuggestions else { return true }  // Consume but do nothing
 
         state.selectedIndex = min(state.suggestions.count - 1, state.selectedIndex + 1)
         state.isNavigatingSuggestions = true
         candidatesWindow()?.moveDown(sender)
         os_log("Selection moved down: %d", log: Log.inputController, type: .debug, state.selectedIndex)
+        return true
+    }
+
+    /// Left arrow: Move cursor left, update suggestions for word at cursor
+    private func handleArrowLeft(client: any IMKTextInput) -> Bool {
+        guard !state.isEmpty else { return false }
+
+        let oldWord = state.currentWord
+        guard state.moveCursorLeft() else { return false }
+
+        state.isNavigatingSuggestions = false
+        updateMarkedText(client: client)
+
+        // If cursor moved to a different word, update suggestions
+        if state.currentWord != oldWord {
+            scheduleCandidateUpdate()
+        }
+
+        os_log("Cursor left: pos=%d, word=%{public}@",
+               log: Log.inputController, type: .debug, state.cursorPosition, state.currentWord)
+        return true
+    }
+
+    /// Right arrow: Move cursor right, update suggestions for word at cursor
+    private func handleArrowRight(client: any IMKTextInput) -> Bool {
+        guard !state.isEmpty else { return false }
+
+        let oldWord = state.currentWord
+        guard state.moveCursorRight() else { return false }
+
+        state.isNavigatingSuggestions = false
+        updateMarkedText(client: client)
+
+        // If cursor moved to a different word, update suggestions
+        if state.currentWord != oldWord {
+            scheduleCandidateUpdate()
+        }
+
+        os_log("Cursor right: pos=%d, word=%{public}@",
+               log: Log.inputController, type: .debug, state.cursorPosition, state.currentWord)
         return true
     }
 
@@ -279,12 +406,12 @@ final class EnputPlusInputController: IMKInputController {
             }
         }
 
-        // Append to composition buffer
-        state.buffer += characters
+        // Insert at cursor position
+        state.insertAtCursor(characters)
         state.isNavigatingSuggestions = false  // New input resets navigation state
-        os_log("Buffer updated: length=%d, currentWord=%{public}@",
+        os_log("Buffer updated: length=%d, cursor=%d, currentWord=%{public}@",
                log: Log.inputController, type: .debug,
-               state.buffer.count, state.currentWord)
+               state.buffer.count, state.cursorPosition, state.currentWord)
 
         updateMarkedText(client: client)
         scheduleCandidateUpdate()
@@ -293,16 +420,24 @@ final class EnputPlusInputController: IMKInputController {
 
     // MARK: - Suggestion Selection
 
-    /// Select a suggestion: replace current word, add space, continue composition
+    /// Select a suggestion: replace word at cursor, add space only if at end
     private func selectSuggestion(_ word: String, client: any IMKTextInput) {
+        // Check if we're editing a word at the end (no text after current word)
+        let isAtEnd = state.wordRangeAtCursor.upperBound >= state.buffer.endIndex
+
         state.replaceCurrentWord(with: word)
-        state.buffer += " "  // Auto-add space for next word
+
+        // Only add space if at end of buffer (adding new word, not editing middle)
+        if isAtEnd {
+            state.insertAtCursor(" ")
+        }
+
         state.suggestions = []
         state.selectedIndex = 0
         state.isNavigatingSuggestions = false
 
-        os_log("Selected suggestion: %{public}@, buffer=%{public}@",
-               log: Log.inputController, type: .debug, word, state.buffer)
+        os_log("Selected suggestion: %{public}@, buffer=%{public}@, atEnd=%d",
+               log: Log.inputController, type: .debug, word, state.buffer, isAtEnd ? 1 : 0)
 
         updateMarkedText(client: client)
         hideCandidates()
@@ -316,11 +451,10 @@ final class EnputPlusInputController: IMKInputController {
             .foregroundColor: NSColor.textColor
         ]
         let attributed = NSAttributedString(string: state.buffer, attributes: attributes)
-        let cursorPosition = state.buffer.utf16.count
 
         client.setMarkedText(
             attributed,
-            selectionRange: .cursor(at: cursorPosition),
+            selectionRange: .cursor(at: state.cursorPosition),
             replacementRange: .noReplacement
         )
     }
