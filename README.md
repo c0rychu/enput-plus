@@ -1,4 +1,5 @@
-![](appicon-iOS-Default-64x64@2x.png)
+<img src="appicon-iOS-Default-64x64@2x.png" width="64">
+
 # EnputPlus
 
 Version: 0.1.0-alpha
