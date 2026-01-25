@@ -25,6 +25,15 @@ enum Constants {
     enum CandidateSelection {
         static let keyRange = 1...9
     }
+
+    /// Characters that separate words for suggestion purposes.
+    enum WordSeparators {
+        static let characters: Set<Character> = [" ", "/"]
+
+        static func isSeparator(_ char: Character) -> Bool {
+            characters.contains(char)
+        }
+    }
 }
 
 /// Type-safe notification names.

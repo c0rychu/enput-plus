@@ -34,18 +34,18 @@ final class EnputPlusInputController: IMKInputController {
             var wordStart = cursorStringIndex
             var wordEnd = cursorStringIndex
 
-            // Search backward for word start
+            // Search backward for word start (stop at any word separator)
             while wordStart > buffer.startIndex {
                 let prevIndex = buffer.index(before: wordStart)
-                if buffer[prevIndex] == " " {
+                if Constants.WordSeparators.isSeparator(buffer[prevIndex]) {
                     break
                 }
                 wordStart = prevIndex
             }
 
-            // Search forward for word end
+            // Search forward for word end (stop at any word separator)
             while wordEnd < buffer.endIndex {
-                if buffer[wordEnd] == " " {
+                if Constants.WordSeparators.isSeparator(buffer[wordEnd]) {
                     break
                 }
                 wordEnd = buffer.index(after: wordEnd)
