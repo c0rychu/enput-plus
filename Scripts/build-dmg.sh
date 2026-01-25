@@ -11,8 +11,15 @@ BUILD_DIR="$PROJECT_DIR/build"
 DIST_DIR="$PROJECT_DIR/dist"
 APP_NAME="EnputPlus.app"
 DMG_NAME="EnputPlus"
-VERSION="1.0"
 VOLUME_NAME="EnputPlus"
+
+# Extract version from Xcode project
+VERSION=$(xcodebuild -project "$PROJECT_DIR/EnputPlus.xcodeproj" -showBuildSettings 2>/dev/null | grep MARKETING_VERSION | head -1 | awk '{print $3}')
+if [ -z "$VERSION" ]; then
+    echo "Error: Could not extract version from Xcode project"
+    exit 1
+fi
+echo "Version: $VERSION"
 DMG_TEMP="$PROJECT_DIR/${DMG_NAME}-temp.dmg"
 DMG_PATH="$PROJECT_DIR/${DMG_NAME}-${VERSION}.dmg"
 

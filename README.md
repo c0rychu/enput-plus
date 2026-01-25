@@ -2,8 +2,6 @@
 
 # EnputPlus
 
-Version: 0.1.0-alpha
-
 A macOS input method designed to help non-native English speakers type with confidence by providing real-time spelling suggestions via an inline popup.
 
 ## Requirements
