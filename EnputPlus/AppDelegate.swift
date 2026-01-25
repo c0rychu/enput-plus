@@ -2,51 +2,74 @@ import Cocoa
 import InputMethodKit
 import os.log
 
-private let log = OSLog(subsystem: "com.enputplus.inputmethod.EnputPlus", category: "AppDelegate")
+// MARK: - AppDelegate
 
-class AppDelegate: NSObject, NSApplicationDelegate {
+/// Application delegate responsible for IMKServer and candidates window lifecycle.
+final class AppDelegate: NSObject, NSApplicationDelegate {
 
-    var server: IMKServer!
-    var candidatesWindow: IMKCandidates!
+    // MARK: - Properties
+
+    private(set) var server: IMKServer?
+    private(set) var candidatesWindow: IMKCandidates?
+
+    // MARK: - NSApplicationDelegate
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        os_log("EnputPlus: applicationDidFinishLaunching called", log: log, type: .default)
+        os_log("Application launching", log: Log.app, type: .info)
+        initializeInputMethod()
+    }
 
+    func applicationWillTerminate(_ notification: Notification) {
+        os_log("Application terminating", log: Log.app, type: .info)
+    }
+
+    // MARK: - Private
+
+    private func initializeInputMethod() {
         guard let connectionName = Bundle.main.infoDictionary?["InputMethodConnectionName"] as? String else {
-            NSLog("EnputPlus: ERROR - Failed to get InputMethodConnectionName from Info.plist")
+            handleFatalError("Missing InputMethodConnectionName in Info.plist")
             return
         }
 
         guard let bundleIdentifier = Bundle.main.bundleIdentifier else {
-            NSLog("EnputPlus: ERROR - Failed to get bundle identifier")
+            handleFatalError("Missing bundle identifier")
             return
         }
 
-        NSLog("EnputPlus: Initializing IMKServer with connection: \(connectionName), bundle: \(bundleIdentifier)")
+        os_log("Initializing IMKServer: connection=%{public}@, bundle=%{public}@",
+               log: Log.app, type: .info, connectionName, bundleIdentifier)
 
-        server = IMKServer(name: connectionName, bundleIdentifier: bundleIdentifier)
-
-        if server == nil {
-            NSLog("EnputPlus: ERROR - IMKServer initialization failed!")
-        } else {
-            NSLog("EnputPlus: IMKServer initialized successfully")
+        guard let server = IMKServer(name: connectionName, bundleIdentifier: bundleIdentifier) else {
+            handleFatalError("IMKServer initialization failed")
+            return
         }
 
+        self.server = server
+        os_log("IMKServer initialized", log: Log.app, type: .info)
+
+        initializeCandidatesWindow(server: server)
+        os_log("Input method ready", log: Log.app, type: .info)
+    }
+
+    private func initializeCandidatesWindow(server: IMKServer) {
         candidatesWindow = IMKCandidates(
             server: server,
             panelType: kIMKSingleColumnScrollingCandidatePanel
         )
 
         if candidatesWindow == nil {
-            NSLog("EnputPlus: ERROR - IMKCandidates initialization failed!")
-        } else {
-            NSLog("EnputPlus: IMKCandidates initialized successfully")
+            os_log("IMKCandidates unavailable - suggestions will not display",
+                   log: Log.app, type: .error)
         }
-
-        NSLog("EnputPlus: Initialization complete")
     }
 
-    func applicationWillTerminate(_ notification: Notification) {
-        NSLog("EnputPlus: applicationWillTerminate called")
+    private func handleFatalError(_ message: String) {
+        os_log("FATAL: %{public}@", log: Log.app, type: .fault, message)
+
+        DistributedNotificationCenter.default().post(
+            name: .enputPlusInitializationFailed,
+            object: nil,
+            userInfo: ["error": message]
+        )
     }
 }

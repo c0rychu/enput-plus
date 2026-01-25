@@ -45,6 +45,9 @@ fi
 # Create Input Methods directory if it doesn't exist
 mkdir -p "$INPUT_METHODS_DIR"
 
+# Kill running instance if any
+killall EnputPlus 2>/dev/null && echo "Stopped running EnputPlus instance" || true
+
 # Remove existing installation
 if [ -d "$INPUT_METHODS_DIR/$APP_NAME" ]; then
     echo "Removing existing installation..."
@@ -59,10 +62,11 @@ echo ""
 echo "=== Installation Complete ==="
 echo ""
 echo "Next steps:"
-echo "1. Log out and log back in (or run: killall -HUP SystemUIServer)"
-echo "2. Go to System Preferences → Keyboard → Input Sources"
-echo "3. Click + and find 'EnputPlus' under English"
-echo "4. Add and switch to EnputPlus"
+echo "1. Open System Settings → Keyboard → Input Sources"
+echo "2. Click + and find 'EnputPlus' under English"
+echo "3. Add and switch to EnputPlus"
+echo ""
+echo "If EnputPlus doesn't appear, log out and log back in."
 echo ""
 echo "To view logs:"
 echo "  log stream --predicate 'subsystem == \"com.enputplus.inputmethod.EnputPlus\"'"

@@ -2,10 +2,19 @@ import Cocoa
 import InputMethodKit
 import os.log
 
-private let appDelegate = AppDelegate()
-private let log = OSLog(subsystem: "com.enputplus.inputmethod.EnputPlus", category: "main")
+// MARK: - Application Entry Point
 
-os_log("EnputPlus: Starting app", log: log, type: .default)
-NSApplication.shared.delegate = appDelegate
-os_log("EnputPlus: Delegate set, calling NSApplicationMain", log: log, type: .default)
-_ = NSApplicationMain(CommandLine.argc, CommandLine.unsafeArgv)
+/// Input Method applications require manual AppDelegate setup before NSApplicationMain.
+/// This is the standard pattern for IMKServer-based input methods.
+
+private let appDelegate = AppDelegate()
+private let log = OSLog(
+    subsystem: Bundle.main.bundleIdentifier ?? Constants.App.bundleIdentifier,
+    category: "Main"
+)
+
+autoreleasepool {
+    os_log("Starting EnputPlus", log: log, type: .info)
+    NSApplication.shared.delegate = appDelegate
+    _ = NSApplicationMain(CommandLine.argc, CommandLine.unsafeArgv)
+}
