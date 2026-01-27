@@ -455,9 +455,11 @@ final class EnputPlusInputController: IMKInputController {
             scheduleCandidateUpdate()
         }
 
+        #if DEBUG
         os_log("Cursor %{public}@: pos=%d, word=%{private}@",
                log: Log.inputController, type: .debug,
                direction == .left ? "left" : "right", state.cursorPosition, state.currentWord)
+        #endif
         return true
     }
 
@@ -489,9 +491,11 @@ final class EnputPlusInputController: IMKInputController {
         // Insert at cursor position
         state.insertAtCursor(characters)
         state.isNavigatingSuggestions = false  // New input resets navigation state
+        #if DEBUG
         os_log("Buffer updated: length=%d, cursor=%d, currentWord=%{private}@",
                log: Log.inputController, type: .debug,
                state.buffer.count, state.cursorPosition, state.currentWord)
+        #endif
 
         updateMarkedText(client: client)
         scheduleCandidateUpdate()
@@ -516,8 +520,10 @@ final class EnputPlusInputController: IMKInputController {
         state.selectedIndex = 0
         state.isNavigatingSuggestions = false
 
+        #if DEBUG
         os_log("Selected suggestion: %{private}@, bufferLength=%d, atEnd=%d",
                log: Log.inputController, type: .debug, word, state.buffer.count, isWordAtBufferEnd ? 1 : 0)
+        #endif
 
         updateMarkedText(client: client)
         hideCandidates()
@@ -585,8 +591,10 @@ final class EnputPlusInputController: IMKInputController {
         state.selectedIndex = 0
         state.isNavigatingSuggestions = false  // New suggestions reset navigation
 
-        os_log("Updated suggestions for '%{public}@': %d",
+        #if DEBUG
+        os_log("Updated suggestions for '%{private}@': %d",
                log: Log.inputController, type: .debug, word, state.suggestions.count)
+        #endif
 
         if state.hasSuggestions {
             showCandidates()
