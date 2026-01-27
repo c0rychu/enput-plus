@@ -49,21 +49,6 @@ final class SpellingSuggestionEngine {
         }
     }
 
-    /// Checks if a word is correctly spelled.
-    func isCorrectlySpelled(_ word: String) -> Bool {
-        let trimmed = word.trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty else { return true }
-        return !isMisspelled(trimmed)
-    }
-
-    /// Adds a word to the user's dictionary.
-    func learn(_ word: String) {
-        let trimmed = word.trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty else { return }
-
-        spellChecker.learnWord(trimmed)
-    }
-
     // MARK: - Private
 
     private func configureLanguage() {

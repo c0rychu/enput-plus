@@ -27,12 +27,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func initializeInputMethod() {
         guard let connectionName = Bundle.main.infoDictionary?["InputMethodConnectionName"] as? String else {
-            handleFatalError("Missing InputMethodConnectionName in Info.plist")
+            reportFatalError("Missing InputMethodConnectionName in Info.plist")
             return
         }
 
         guard let bundleIdentifier = Bundle.main.bundleIdentifier else {
-            handleFatalError("Missing bundle identifier")
+            reportFatalError("Missing bundle identifier")
             return
         }
 
@@ -40,7 +40,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                log: Log.app, type: .info, connectionName, bundleIdentifier)
 
         guard let server = IMKServer(name: connectionName, bundleIdentifier: bundleIdentifier) else {
-            handleFatalError("IMKServer initialization failed")
+            reportFatalError("IMKServer initialization failed")
             return
         }
 
@@ -63,7 +63,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func handleFatalError(_ message: String) {
+    private func reportFatalError(_ message: String) {
         os_log("FATAL: %{public}@", log: Log.app, type: .fault, message)
 
         DistributedNotificationCenter.default().post(
