@@ -14,9 +14,8 @@ EnputPlus is a macOS Input Method (IME) that provides real-time spelling suggest
 # Build and install to ~/Library/Input Methods/
 ./Scripts/install.sh
 
-# Create distribution DMG (Release build)
-./Scripts/build-dmg.sh
-
+# Create signed and notarized PKG installer (Release build)
+./Scripts/build-pkg.sh
 ```
 
 After installation, enable the input method in System Preferences → Keyboard → Input Sources.

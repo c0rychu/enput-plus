@@ -9,6 +9,7 @@ DerivedData/
 # Distribution
 dist/
 *.dmg
+*.pkg
 
 # macOS
 .DS_Store
@@ -20,6 +21,9 @@ dist/
 *.swp
 *.swo
 *~
+
+# Claude Code local settings
+.claude/
 
 # Archive
 *.xcarchive

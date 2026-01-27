@@ -71,13 +71,18 @@ log stream --predicate 'subsystem == "com.enputplus.inputmethod.EnputPlus"'
 
 ## Distribution
 
-To create a distributable DMG:
+To create a signed and notarized PKG installer:
 
 ```bash
-./Scripts/build-dmg.sh
+./Scripts/build-pkg.sh
 ```
 
-For notarization (requires Apple Developer account), see the script output for instructions.
+This requires:
+- Developer ID Application certificate (for signing the app)
+- Developer ID Installer certificate (for signing the PKG)
+- Notarization profile stored in keychain (`xcrun notarytool store-credentials`)
+
+The installer supports both user-specific (`~/Library/Input Methods`) and system-wide (`/Library/Input Methods`) installation.
 
 ## Project Structure
 
@@ -93,7 +98,7 @@ EnputPlus/
 │   └── Assets.xcassets/               # App icons
 └── Scripts/
     ├── install.sh                     # Build & install script
-    └── build-dmg.sh                   # DMG creation script
+    └── build-pkg.sh                   # PKG installer builder
 ```
 
 ## License
