@@ -384,7 +384,7 @@ final class EnputPlusInputController: IMKInputController {
             scheduleCandidateUpdate()
         }
 
-        os_log("Cursor left: pos=%d, word=%{public}@",
+        os_log("Cursor left: pos=%d, word=%{private}@",
                log: Log.inputController, type: .debug, state.cursorPosition, state.currentWord)
         return true
     }
@@ -404,7 +404,7 @@ final class EnputPlusInputController: IMKInputController {
             scheduleCandidateUpdate()
         }
 
-        os_log("Cursor right: pos=%d, word=%{public}@",
+        os_log("Cursor right: pos=%d, word=%{private}@",
                log: Log.inputController, type: .debug, state.cursorPosition, state.currentWord)
         return true
     }
@@ -429,7 +429,7 @@ final class EnputPlusInputController: IMKInputController {
         // Insert at cursor position
         state.insertAtCursor(characters)
         state.isNavigatingSuggestions = false  // New input resets navigation state
-        os_log("Buffer updated: length=%d, cursor=%d, currentWord=%{public}@",
+        os_log("Buffer updated: length=%d, cursor=%d, currentWord=%{private}@",
                log: Log.inputController, type: .debug,
                state.buffer.count, state.cursorPosition, state.currentWord)
 
@@ -456,8 +456,8 @@ final class EnputPlusInputController: IMKInputController {
         state.selectedIndex = 0
         state.isNavigatingSuggestions = false
 
-        os_log("Selected suggestion: %{public}@, buffer=%{public}@, atEnd=%d",
-               log: Log.inputController, type: .debug, word, state.buffer, isAtEnd ? 1 : 0)
+        os_log("Selected suggestion: %{private}@, bufferLength=%d, atEnd=%d",
+               log: Log.inputController, type: .debug, word, state.buffer.count, isAtEnd ? 1 : 0)
 
         updateMarkedText(client: client)
         hideCandidates()

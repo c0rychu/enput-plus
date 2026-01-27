@@ -10,6 +10,7 @@ final class SpellingSuggestionEngine {
 
     private let spellChecker = NSSpellChecker.shared
     private let language: String
+    private var effectiveLanguage: String
     private let maxSuggestions: Int
     private let documentTag: Int
 
@@ -20,6 +21,7 @@ final class SpellingSuggestionEngine {
         maxSuggestions: Int = Constants.Spelling.maxSuggestions
     ) {
         self.language = language
+        self.effectiveLanguage = language
         self.maxSuggestions = maxSuggestions
         self.documentTag = NSSpellChecker.uniqueSpellDocumentTag()
 
@@ -65,7 +67,10 @@ final class SpellingSuggestionEngine {
     // MARK: - Private
 
     private func configureLanguage() {
-        guard !spellChecker.setLanguage(language) else { return }
+        if spellChecker.setLanguage(language) {
+            effectiveLanguage = language
+            return
+        }
 
         #if DEBUG
         os_log("Language %{public}@ unavailable, trying fallback",
@@ -74,6 +79,7 @@ final class SpellingSuggestionEngine {
 
         for fallback in spellChecker.availableLanguages {
             if spellChecker.setLanguage(fallback) {
+                effectiveLanguage = fallback
                 #if DEBUG
                 os_log("Using fallback language: %{public}@",
                        log: Log.spelling, type: .info, fallback)
@@ -96,7 +102,7 @@ final class SpellingSuggestionEngine {
         let guesses = spellChecker.guesses(
             forWordRange: range,
             in: word,
-            language: language,
+            language: effectiveLanguage,
             inSpellDocumentWithTag: documentTag
         ) ?? []
 
@@ -107,7 +113,7 @@ final class SpellingSuggestionEngine {
         let results = spellChecker.completions(
             forPartialWordRange: range,
             in: word,
-            language: language,
+            language: effectiveLanguage,
             inSpellDocumentWithTag: documentTag
         ) ?? []
 
@@ -121,4 +127,3 @@ final class SpellingSuggestionEngine {
         #endif
     }
 }
-
