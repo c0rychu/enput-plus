@@ -4,6 +4,9 @@
 
 A macOS input method designed to help non-native English speakers type with confidence by providing real-time spelling suggestions via an inline popup.
 
+## DEMO
+<img src="EnputPlus-demo.gif" width="400">
+
 ## Requirements
 
 - macOS 14.0 (Sonoma) or later
