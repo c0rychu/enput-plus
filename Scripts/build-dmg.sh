@@ -79,16 +79,21 @@ else
     echo "Note: No background image found. Create Scripts/dmg-background.png (540x370) to add one."
 fi
 
-# Check if we should sign (optional)
-if [ -n "$DEVELOPER_ID" ]; then
-    echo "Signing with Developer ID: $DEVELOPER_ID"
-    codesign --deep --force --verify --verbose \
-        --sign "Developer ID Application: $DEVELOPER_ID" \
-        --options runtime \
-        "$DIST_DIR/$APP_NAME"
-else
-    echo "Note: Skipping code signing. Set DEVELOPER_ID environment variable to sign."
-fi
+# Code signing configuration
+SIGNING_IDENTITY="Developer ID Application: Yu-Kuang Chu (G3F7QCP2GS)"
+NOTARIZE_PROFILE="EnputPlus-notarize"
+
+# Sign the app with hardened runtime
+echo "Signing app with Developer ID..."
+codesign --deep --force --verify --verbose \
+    --sign "$SIGNING_IDENTITY" \
+    --options runtime \
+    --timestamp \
+    "$DIST_DIR/$APP_NAME"
+
+# Verify signature
+echo "Verifying signature..."
+codesign --verify --verbose=2 "$DIST_DIR/$APP_NAME"
 
 # Create temporary read-write DMG
 echo "Creating DMG..."
@@ -152,22 +157,22 @@ hdiutil convert "$DMG_TEMP" -format UDZO -o "$DMG_PATH"
 # Clean up temp DMG
 rm -f "$DMG_TEMP"
 
+# Sign the DMG
+echo "Signing DMG..."
+codesign --force --sign "$SIGNING_IDENTITY" --timestamp "$DMG_PATH"
+
+# Notarize
+echo "Submitting for notarization..."
+xcrun notarytool submit "$DMG_PATH" \
+    --keychain-profile "$NOTARIZE_PROFILE" \
+    --wait
+
+# Staple the notarization ticket
+echo "Stapling notarization ticket..."
+xcrun stapler staple "$DMG_PATH"
+
 echo ""
-echo "=== DMG Created ==="
+echo "=== DMG Created and Notarized ==="
 echo "Location: $DMG_PATH"
 echo ""
 echo "Installation: Drag EnputPlus.app to 'Input Methods' folder, then log out/in."
-echo ""
-
-# Notarization instructions
-if [ -z "$DEVELOPER_ID" ]; then
-    echo "To notarize (requires Apple Developer account):"
-    echo ""
-    echo "  xcrun notarytool submit \"$DMG_PATH\" \\"
-    echo "    --apple-id \"your@email.com\" \\"
-    echo "    --team-id \"TEAMID\" \\"
-    echo "    --password \"app-specific-password\" \\"
-    echo "    --wait"
-    echo ""
-    echo "  xcrun stapler staple \"$DMG_PATH\""
-fi
