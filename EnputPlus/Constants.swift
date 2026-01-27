@@ -27,8 +27,9 @@ enum Constants {
     }
 
     /// Characters that separate words for suggestion purposes.
+    /// These characters pass through directly when the buffer is empty.
     enum WordSeparators {
-        static let characters: Set<Character> = [" ", "/"]
+        static let characters: Set<Character> = [" ", "-", "/"]
 
         static func isSeparator(_ char: Character) -> Bool {
             characters.contains(char)

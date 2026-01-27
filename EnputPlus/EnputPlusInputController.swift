@@ -317,8 +317,11 @@ final class EnputPlusInputController: IMKInputController {
         return true
     }
 
-    /// Space: Add literal space at cursor, continue composition
+    /// Space: Pass through if buffer empty, otherwise add to composition
     private func handleSpace(client: any IMKTextInput) -> Bool {
+        // Let system handle space when not composing
+        guard !state.isEmpty else { return false }
+
         state.insertAtCursor(" ")
         state.suggestions = []
         state.selectedIndex = 0
@@ -331,11 +334,15 @@ final class EnputPlusInputController: IMKInputController {
         return true
     }
 
-    /// Tab: Select first suggestion
+    /// Tab: Select current suggestion, or pass through if not composing
     private func handleTab(client: any IMKTextInput) -> Bool {
-        guard !state.suggestions.isEmpty else { return false }
+        // Pass through when not composing
+        guard !state.isEmpty else { return false }
 
-        selectSuggestion(state.suggestions[0], client: client)
+        // Select current suggestion if available, otherwise just consume the key
+        if state.selectedIndex < state.suggestions.count {
+            selectSuggestion(state.suggestions[state.selectedIndex], client: client)
+        }
         return true
     }
 
@@ -391,10 +398,12 @@ final class EnputPlusInputController: IMKInputController {
 
     /// Left arrow: Move cursor left, update suggestions for word at cursor
     private func handleArrowLeft(client: any IMKTextInput) -> Bool {
+        // Pass through when not composing
         guard !state.isEmpty else { return false }
 
+        // Consume key even if can't move further (prevent system interference)
         let oldWord = state.currentWord
-        guard state.moveCursorLeft() else { return false }
+        guard state.moveCursorLeft() else { return true }
 
         state.isNavigatingSuggestions = false
         updateMarkedText(client: client)
@@ -411,10 +420,12 @@ final class EnputPlusInputController: IMKInputController {
 
     /// Right arrow: Move cursor right, update suggestions for word at cursor
     private func handleArrowRight(client: any IMKTextInput) -> Bool {
+        // Pass through when not composing
         guard !state.isEmpty else { return false }
 
+        // Consume key even if can't move further (prevent system interference)
         let oldWord = state.currentWord
-        guard state.moveCursorRight() else { return false }
+        guard state.moveCursorRight() else { return true }
 
         state.isNavigatingSuggestions = false
         updateMarkedText(client: client)
@@ -433,6 +444,13 @@ final class EnputPlusInputController: IMKInputController {
 
     private func handleCharacterInput(_ characters: String?, client: any IMKTextInput) -> Bool {
         guard let characters = characters, !characters.isEmpty else { return false }
+
+        // Pass through separator characters when not composing
+        if state.isEmpty,
+           let firstChar = characters.first,
+           Constants.WordSeparators.isSeparator(firstChar) {
+            return false
+        }
 
         // Number keys 1-9 select candidates when suggestions are showing
         if state.hasSuggestions,
