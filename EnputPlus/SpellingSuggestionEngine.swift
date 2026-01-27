@@ -88,9 +88,9 @@ final class SpellingSuggestionEngine {
             }
         }
 
-        #if DEBUG
+        // No language worked - use empty string to trigger default behavior
+        effectiveLanguage = ""
         os_log("No spell check language available", log: Log.spelling, type: .error)
-        #endif
     }
 
     private func isMisspelled(_ word: String) -> Bool {
