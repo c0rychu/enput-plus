@@ -45,6 +45,18 @@ final class EnputPlusInputController: IMKInputController {
             return buffer.startIndex
         }
 
+        /// Returns true if the hyphen at the given index is between two letters (for compound words).
+        func isHyphenBetweenLetters(at index: String.Index) -> Bool {
+            guard buffer[index] == "-",
+                  index > buffer.startIndex,
+                  buffer.index(after: index) < buffer.endIndex else {
+                return false
+            }
+            let before = buffer[buffer.index(before: index)]
+            let after = buffer[buffer.index(after: index)]
+            return before.isLetter && after.isLetter
+        }
+
         /// Range of the word at cursor position (start index, end index in buffer).
         var wordRangeAtCursor: Range<String.Index> {
             guard !buffer.isEmpty else { return buffer.startIndex..<buffer.startIndex }
@@ -58,7 +70,17 @@ final class EnputPlusInputController: IMKInputController {
             // Search backward for word start (stop at any word separator)
             while wordStart > buffer.startIndex {
                 let prevIndex = buffer.index(before: wordStart)
-                if Constants.WordSeparators.isSeparator(buffer[prevIndex]) {
+                let char = buffer[prevIndex]
+
+                if char == "-" {
+                    if isHyphenBetweenLetters(at: prevIndex) {
+                        wordStart = prevIndex
+                        continue
+                    }
+                    break
+                }
+
+                if Constants.WordSeparators.isSeparator(char) {
                     break
                 }
                 wordStart = prevIndex
@@ -66,7 +88,17 @@ final class EnputPlusInputController: IMKInputController {
 
             // Search forward for word end (stop at any word separator)
             while wordEnd < buffer.endIndex {
-                if Constants.WordSeparators.isSeparator(buffer[wordEnd]) {
+                let char = buffer[wordEnd]
+
+                if char == "-" {
+                    if isHyphenBetweenLetters(at: wordEnd) {
+                        wordEnd = buffer.index(after: wordEnd)
+                        continue
+                    }
+                    break
+                }
+
+                if Constants.WordSeparators.isSeparator(char) {
                     break
                 }
                 wordEnd = buffer.index(after: wordEnd)
@@ -445,10 +477,11 @@ final class EnputPlusInputController: IMKInputController {
     private func handleCharacterInput(_ characters: String?, client: any IMKTextInput) -> Bool {
         guard let characters = characters, !characters.isEmpty else { return false }
 
-        // Pass through separator characters when not composing
+        // Pass through punctuation when not composing (hyphen included, though it's
+        // not a word separator since it can appear in compound words like "well-known")
         if state.isEmpty,
            let firstChar = characters.first,
-           Constants.WordSeparators.isSeparator(firstChar) {
+           !firstChar.isLetter && !firstChar.isNumber {
             return false
         }
 

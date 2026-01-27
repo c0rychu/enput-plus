@@ -28,11 +28,13 @@ enum Constants {
 
     /// Characters that separate words for suggestion purposes.
     /// These characters pass through directly when the buffer is empty.
+    /// Note: Hyphen has special context-aware handling in wordRangeAtCursor
+    /// (only treated as separator when not between letters, for compound words).
     enum WordSeparators {
-        static let characters: Set<Character> = [" ", "-", "/"]
-
+        /// Returns true if the character is a word separator.
+        /// Letters and numbers are not separators.
         static func isSeparator(_ char: Character) -> Bool {
-            characters.contains(char)
+            !char.isLetter && !char.isNumber
         }
     }
 }
