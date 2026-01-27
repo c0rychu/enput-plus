@@ -1,4 +1,4 @@
-<img src="appicon-iOS-Default-64x64@2x.png" width="64">
+<img src="appicon-64x64@2x.png" width="64">
 
 # EnputPlus
 
