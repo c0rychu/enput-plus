@@ -114,6 +114,7 @@ pkgbuild \
     --root "$PAYLOAD_DIR" \
     --filter '.DS_Store' \
     --component-plist "$COMPONENT_PLIST" \
+    --scripts "$SCRIPT_DIR/pkg-scripts" \
     --identifier "com.enputplus.inputmethod.EnputPlus" \
     --version "$VERSION" \
     --install-location "/Library/Input Methods" \
@@ -162,4 +163,4 @@ echo ""
 echo "=== PKG Created and Notarized ==="
 echo "Location: $PKG_PATH"
 echo ""
-echo "Users can double-click to install, then log out/in to activate."
+echo "Users will see a post-install dialog prompting them to log out/in."

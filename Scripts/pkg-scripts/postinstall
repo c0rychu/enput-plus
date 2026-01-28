@@ -1,0 +1,8 @@
+#!/bin/bash
+
+# Post-install script for EnputPlus
+# Shows a dialog informing the user to log out and back in
+
+osascript -e 'display dialog "EnputPlus has been installed/updated successfully.\n\nPlease log out and log back in to activate the changes.\n\nAfter logging in, enable EnputPlus in:\nSystem Settings → Keyboard → Input Sources" with title "EnputPlus" buttons {"OK"} default button "OK" with icon note'
+
+exit 0
