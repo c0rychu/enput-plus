@@ -26,4 +26,7 @@ enum Log {
 
     /// Logs for spelling engine operations.
     static let spelling = OSLog(subsystem: subsystem, category: "Spelling")
+
+    /// Logs for settings and preferences.
+    static let settings = OSLog(subsystem: subsystem, category: "Settings")
 }

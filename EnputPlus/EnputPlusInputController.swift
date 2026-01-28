@@ -17,6 +17,7 @@ final class EnputPlusInputController: IMKInputController {
         var suggestions: [String] = []
         var selectedIndex = 0
         var isNavigatingSuggestions = false  // True when user used arrow keys to select
+        var areCandidatesVisible = false  // Tracks whether candidates window is showing
 
         var isEmpty: Bool { buffer.isEmpty }
         var hasSuggestions: Bool { !suggestions.isEmpty }
@@ -118,6 +119,11 @@ final class EnputPlusInputController: IMKInputController {
         mutating func reset() {
             buffer = ""
             cursorPosition = 0
+            clearSuggestions()
+            areCandidatesVisible = false
+        }
+
+        mutating func clearSuggestions() {
             suggestions = []
             selectedIndex = 0
             isNavigatingSuggestions = false
@@ -195,6 +201,17 @@ final class EnputPlusInputController: IMKInputController {
     override func menu() -> NSMenu! {
         let menu = NSMenu()
 
+        let autoShowItem = NSMenuItem(
+            title: "Auto-show Suggestions",
+            action: #selector(toggleAutoShow(_:)),
+            keyEquivalent: ""
+        )
+        autoShowItem.target = self
+        autoShowItem.state = Settings.autoShowSuggestions ? .on : .off
+        menu.addItem(autoShowItem)
+
+        menu.addItem(NSMenuItem.separator())
+
         let aboutItem = NSMenuItem(
             title: "About EnputPlus",
             action: #selector(showAbout(_:)),
@@ -204,6 +221,11 @@ final class EnputPlusInputController: IMKInputController {
         menu.addItem(aboutItem)
 
         return menu
+    }
+
+    @objc private func toggleAutoShow(_ sender: NSMenuItem) {
+        Settings.autoShowSuggestions.toggle()
+        sender.state = Settings.autoShowSuggestions ? .on : .off
     }
 
     @objc private func showAbout(_ sender: Any?) {
@@ -344,6 +366,13 @@ final class EnputPlusInputController: IMKInputController {
     private func handleEscape(client: any IMKTextInput) -> Bool {
         guard !state.isEmpty else { return false }
 
+        // If candidates are showing, first Escape just dismisses them
+        if state.areCandidatesVisible {
+            state.clearSuggestions()
+            hideCandidates()
+            return true
+        }
+
         // Commit exactly what user typed, ignore suggestions
         commitBuffer(to: client)
         return true
@@ -355,9 +384,7 @@ final class EnputPlusInputController: IMKInputController {
         guard !state.isEmpty else { return false }
 
         state.insertAtCursor(" ")
-        state.suggestions = []
-        state.selectedIndex = 0
-        state.isNavigatingSuggestions = false
+        state.clearSuggestions()
 
         os_log("Space added, buffer length=%d", log: Log.inputController, type: .debug, state.buffer.count)
 
@@ -371,8 +398,8 @@ final class EnputPlusInputController: IMKInputController {
         // Pass through when not composing
         guard !state.isEmpty else { return false }
 
-        // Select current suggestion if available, otherwise just consume the key
-        if state.selectedIndex < state.suggestions.count {
+        // Only select a suggestion if the candidates panel is visible
+        if state.areCandidatesVisible, state.selectedIndex < state.suggestions.count {
             selectSuggestion(state.suggestions[state.selectedIndex], client: client)
         }
         return true
@@ -404,7 +431,7 @@ final class EnputPlusInputController: IMKInputController {
     private func handleArrowUp(sender: Any!) -> Bool {
         // Always consume up/down when we have a buffer to prevent system from interfering
         guard !state.isEmpty else { return false }
-        guard state.hasSuggestions else { return true }  // Consume but do nothing
+        guard state.areCandidatesVisible, state.hasSuggestions else { return true }
 
         state.selectedIndex = max(0, state.selectedIndex - 1)
         state.isNavigatingSuggestions = true
@@ -416,6 +443,22 @@ final class EnputPlusInputController: IMKInputController {
     private func handleArrowDown(sender: Any!) -> Bool {
         // Always consume up/down when we have a buffer to prevent system from interfering
         guard !state.isEmpty else { return false }
+
+        // If candidates aren't showing, fetch and display suggestions.
+        // Fetches synchronously (bypassing debounce) for immediate response to user action.
+        if !state.areCandidatesVisible {
+            if !state.hasSuggestions, state.hasWordAtCursor {
+                state.suggestions = spellingEngine.suggestions(for: state.currentWord)
+                state.selectedIndex = 0
+            }
+            if state.hasSuggestions {
+                showCandidates()
+                state.isNavigatingSuggestions = true
+                os_log("Showing suggestions on demand", log: Log.inputController, type: .debug)
+            }
+            return true
+        }
+
         guard state.hasSuggestions else { return true }  // Consume but do nothing
 
         state.selectedIndex = min(state.suggestions.count - 1, state.selectedIndex + 1)
@@ -476,8 +519,8 @@ final class EnputPlusInputController: IMKInputController {
             return false
         }
 
-        // Number keys 1-9 select candidates when suggestions are showing
-        if state.hasSuggestions,
+        // Number keys 1-9 select candidates when candidates panel is visible
+        if state.areCandidatesVisible,
            characters.count == 1,
            let number = Int(characters),
            Constants.CandidateSelection.keyRange.contains(number) {
@@ -596,10 +639,13 @@ final class EnputPlusInputController: IMKInputController {
                log: Log.inputController, type: .debug, word, state.suggestions.count)
         #endif
 
-        if state.hasSuggestions {
-            showCandidates()
-        } else {
-            hideCandidates()
+        // Show/update candidates if auto-show is enabled or panel is already visible
+        if Settings.autoShowSuggestions || state.areCandidatesVisible {
+            if state.hasSuggestions {
+                showCandidates()
+            } else {
+                hideCandidates()
+            }
         }
     }
 
@@ -610,10 +656,12 @@ final class EnputPlusInputController: IMKInputController {
         }
         window.update()
         window.show()
+        state.areCandidatesVisible = true
     }
 
     private func hideCandidates() {
         candidatesWindow()?.hide()
+        state.areCandidatesVisible = false
     }
 
     private func candidatesWindow() -> IMKCandidates? {

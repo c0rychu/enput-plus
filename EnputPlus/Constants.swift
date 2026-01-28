@@ -18,7 +18,7 @@ enum Constants {
         /// Preferred language for spell checking.
         static let preferredLanguage = "en_US"
         /// Maximum number of suggestions to display.
-        static let maxSuggestions = 7
+        static let maxSuggestions = 9
     }
 
     /// Candidate selection key range (1-9).

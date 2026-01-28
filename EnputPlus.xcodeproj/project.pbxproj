@@ -19,6 +19,7 @@
 		E91000002B000000000000B /* InputMethodIcon.pdf in Resources */ = {isa = PBXBuildFile; fileRef = E91000012B000000000000B /* InputMethodIcon.pdf */; };
 		E91000002B000000000000C /* Logger.swift in Sources */ = {isa = PBXBuildFile; fileRef = E91000012B000000000000C /* Logger.swift */; };
 		E91000002B000000000000D /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = E91000012B000000000000D /* Constants.swift */; };
+		E91000002B000000000000E /* Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = E91000012B000000000000E /* Settings.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -37,6 +38,7 @@
 		E91000012B000000000000B /* InputMethodIcon.pdf */ = {isa = PBXFileReference; lastKnownFileType = image.pdf; path = InputMethodIcon.pdf; sourceTree = "<group>"; };
 		E91000012B000000000000C /* Logger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Logger.swift; sourceTree = "<group>"; };
 		E91000012B000000000000D /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
+		E91000012B000000000000E /* Settings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Settings.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -67,6 +69,7 @@
 				22E3C77E2F26393E006F3809 /* PreferencesWindow.swift */,
 				E91000012B0000000000009 /* main.swift */,
 				E91000012B000000000000D /* Constants.swift */,
+				E91000012B000000000000E /* Settings.swift */,
 				E91000012B000000000000C /* Logger.swift */,
 				E91000012B0000000000001 /* AppDelegate.swift */,
 				E91000012B0000000000002 /* EnputPlusInputController.swift */,
@@ -175,6 +178,7 @@
 				E91000002B0000000000002 /* EnputPlusInputController.swift in Sources */,
 				22E3C77F2F26393E006F3809 /* PreferencesWindow.swift in Sources */,
 				E91000002B0000000000003 /* SpellingSuggestionEngine.swift in Sources */,
+				E91000002B000000000000E /* Settings.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -15,6 +15,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - NSApplicationDelegate
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        Settings.registerDefaults()
         os_log("Application launching", log: Log.app, type: .info)
         initializeInputMethod()
     }
